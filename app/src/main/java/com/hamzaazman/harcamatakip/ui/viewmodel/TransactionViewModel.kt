@@ -25,7 +25,7 @@ class TransactionViewModel @Inject constructor(
     private val _allTransactions = MutableSharedFlow<List<Transaction>>()
     val allTransactions = _allTransactions.asSharedFlow()
 
-    fun fetchAllTransactions() = viewModelScope.launch {
+     fun fetchAllTransactions() = viewModelScope.launch {
         val response = repository.fetchAllTransaction()
         response.collect {
             _allTransactions.emit(it)
@@ -91,6 +91,8 @@ class TransactionViewModel @Inject constructor(
             return flow<Double> {
                 combine(totalExpenses, totalInCome) { e, i ->
                     return@combine (i - e)
+                }.collect{
+                    emit(it)
                 }.runCatching {
                     emit(0.0)
                 }

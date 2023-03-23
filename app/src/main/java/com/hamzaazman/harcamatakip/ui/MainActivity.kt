@@ -2,6 +2,7 @@ package com.hamzaazman.harcamatakip.ui
 
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import androidx.activity.viewModels
@@ -10,7 +11,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.DividerItemDecoration
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.hamzaazman.harcamatakip.R
+import com.hamzaazman.harcamatakip.common.getFormattedNumber
 import com.hamzaazman.harcamatakip.databinding.ActivityMainBinding
 import com.hamzaazman.harcamatakip.ui.viewmodel.TransactionType
 import com.hamzaazman.harcamatakip.ui.viewmodel.TransactionViewModel
@@ -23,6 +27,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private val vm: TransactionViewModel by viewModels()
+    private val transactionAdapter: TransactionAdapter by lazy { TransactionAdapter() }
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,41 +35,63 @@ class MainActivity : AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
         setSupportActionBar(findViewById(R.id.toolbar))
+        setupRv()
+
         val transaction: com.hamzaazman.harcamatakip.data.model.Transaction =
             com.hamzaazman.harcamatakip.data.model.Transaction(
-                id = 1,
-                title = "Yol-Masraf",
-                tags = "yol",
-                amount = 60.00,
-                date= LocalDate.of(2000, 1, 1).toString(),
-                type = TransactionType.Expenses.toString()
+                id = 0,
+                title = "Bahşiş",
+                tags = "bahşiş",
+                amount = 500.00,
+                date = LocalDate.of(2005, 2, 1).toString(),
+                type = TransactionType.Income.toString()
             )
         vm.addTransaction(transaction)
+        vm.fetchAllTransactions()
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                vm.totalValue.collect {
-                    binding.tvTotalValue.text = it.toString()
+                vm.allTransactions.collect {
+                    Log.d("list", "onCreate: $it")
+                    transactionAdapter.submitList(it)
                 }
             }
         }
+
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 vm.calculateInCome().collect {
-                    binding.tvIncome.text = it.toString()
+                    binding.tvIncomeValue.text = it.toString()
                 }
             }
         }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 vm.calculateExpenses().collect {
-                    binding.tvOutcome.text = it.toString()
+                    binding.tvExpenseValue.text = it.toString()
                 }
             }
         }
 
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                vm.totalValue.collect {
+                    binding.tvTotalValue.text = getFormattedNumber(it.toString())
+                }
+            }
+        }
+    }
+
+    private fun setupRv() = with(binding) {
+        rvTransaction.apply {
+            adapter = transactionAdapter
+            addItemDecoration(
+                DividerItemDecoration(
+                    this@MainActivity, LinearLayoutManager.VERTICAL
+                )
+            )
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

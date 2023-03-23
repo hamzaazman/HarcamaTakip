@@ -6,10 +6,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TransactionDao {
-    @Query("SELECT * FROM `transaction`")
+    @Query("SELECT * FROM `transaction` ORDER BY DATE DESC")
     fun getAllTransactions(): Flow<List<Transaction>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTransaction(transaction: Transaction)
 
     // get all income or expense list by transaction type param
