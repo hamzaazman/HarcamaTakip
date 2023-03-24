@@ -1,10 +1,12 @@
 package com.hamzaazman.harcamatakip.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hamzaazman.harcamatakip.data.model.Transaction
 import com.hamzaazman.harcamatakip.data.repo.TransactionRepo
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -25,15 +27,21 @@ class TransactionViewModel @Inject constructor(
     private val _allTransactions = MutableSharedFlow<List<Transaction>>()
     val allTransactions = _allTransactions.asSharedFlow()
 
-     fun fetchAllTransactions() = viewModelScope.launch {
+    fun fetchAllTransactions() = viewModelScope.launch {
         val response = repository.fetchAllTransaction()
         response.collect {
             _allTransactions.emit(it)
+            Log.d("lifecycle", "çalışıt")
         }
+
     }
 
     fun addTransaction(transaction: Transaction) = viewModelScope.launch {
         repository.addTransaction(transaction)
+    }
+
+    fun removeTransaction(transaction: Transaction) = viewModelScope.launch(Dispatchers.IO) {
+        repository.deleteTransaction(transaction)
     }
 
     private val totalInCome: Flow<Double>
@@ -91,7 +99,7 @@ class TransactionViewModel @Inject constructor(
             return flow<Double> {
                 combine(totalExpenses, totalInCome) { e, i ->
                     return@combine (i - e)
-                }.collect{
+                }.collect {
                     emit(it)
                 }.runCatching {
                     emit(0.0)

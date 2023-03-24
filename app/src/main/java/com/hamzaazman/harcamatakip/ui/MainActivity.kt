@@ -1,5 +1,6 @@
 package com.hamzaazman.harcamatakip.ui
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -12,15 +13,15 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.DividerItemDecoration
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.hamzaazman.harcamatakip.R
 import com.hamzaazman.harcamatakip.common.getFormattedNumber
 import com.hamzaazman.harcamatakip.databinding.ActivityMainBinding
-import com.hamzaazman.harcamatakip.ui.viewmodel.TransactionType
 import com.hamzaazman.harcamatakip.ui.viewmodel.TransactionViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -37,35 +38,46 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         setSupportActionBar(findViewById(R.id.toolbar))
         setupRv()
-
-        val transaction: com.hamzaazman.harcamatakip.data.model.Transaction =
-            com.hamzaazman.harcamatakip.data.model.Transaction(
-                id = 0,
-                title = "Bahşiş",
-                tags = "bahşiş",
-                amount = 500.00,
-                date = LocalDate.of(2005, 2, 1).toString(),
-                type = TransactionType.Income.toString()
-            )
-        vm.addTransaction(transaction)
+        setupSwapDelete()
         vm.fetchAllTransactions()
+        observeAllTransaction()
+        observeIncome()
+        observeExpense()
+        observeTotal()
 
+
+    }
+
+    private fun setupSwapDelete() {
+        val transactionTouchHelper = object :
+            ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
+            override fun onMove(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder
+            ): Boolean {
+                return false
+            }
+
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                vm.removeTransaction(transactionAdapter.currentList[viewHolder.adapterPosition])
+            }
+        }
+        ItemTouchHelper(transactionTouchHelper).attachToRecyclerView(binding.rvTransaction)
+    }
+
+    private fun observeTotal() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                vm.allTransactions.collect {
-                    Log.d("list", "onCreate: $it")
-                    transactionAdapter.submitList(it)
+                vm.totalValue.collect {
+                    Log.d("lifecycle", "observeTotal: $it ")
+                    binding.tvTotalValue.text = getFormattedNumber(it.toString())
                 }
             }
         }
+    }
 
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                vm.calculateInCome().collect {
-                    binding.tvIncomeValue.text = it.toString()
-                }
-            }
-        }
+    private fun observeExpense() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 vm.calculateExpenses().collect {
@@ -73,14 +85,27 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
 
+    private fun observeIncome() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                vm.totalValue.collect {
-                    binding.tvTotalValue.text = getFormattedNumber(it.toString())
+                vm.calculateInCome().collect {
+                    binding.tvIncomeValue.text = it.toString()
                 }
             }
         }
+    }
+
+    private fun observeAllTransaction() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                vm.allTransactions.collect {
+                    transactionAdapter.submitList(it)
+                }
+            }
+        }
+
     }
 
     private fun setupRv() = with(binding) {
@@ -92,6 +117,11 @@ class MainActivity : AppCompatActivity() {
                 )
             )
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        vm.fetchAllTransactions()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -106,7 +136,11 @@ class MainActivity : AppCompatActivity() {
         // as you specify a parent activity in AndroidManifest.xml.
 
         return when (item.itemId) {
-            R.id.action_settings -> true
+            R.id.addTransaction -> {
+                val intent = Intent(this@MainActivity, AddActivity::class.java)
+                startActivity(intent)
+                return true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }

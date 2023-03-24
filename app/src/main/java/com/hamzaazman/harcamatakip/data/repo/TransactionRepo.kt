@@ -5,6 +5,7 @@ import com.hamzaazman.harcamatakip.data.model.Transaction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import javax.inject.Inject
 
@@ -21,5 +22,9 @@ class TransactionRepo @Inject constructor(
 
     fun getAllSingleTransaction(type: String): Flow<List<Transaction>> {
         return dao.getAllSingleTransaction(type)
+    }
+
+    fun deleteTransaction(transaction: Transaction) {
+        dao.nuke(transaction)
     }
 }
